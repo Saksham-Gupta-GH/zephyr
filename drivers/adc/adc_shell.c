@@ -6,6 +6,7 @@
 
 #include <zephyr/shell/shell.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <zephyr/drivers/adc.h>
 #include <ctype.h>
 #include <zephyr/sys/util.h>
@@ -419,18 +420,44 @@ static int cmd_adc_print(const struct shell *sh, size_t argc, char **argv)
 {
 	/* -1 index of ADC label name */
 	struct adc_hdl *adc = get_adc(argv[-1]);
+	char acq_time_str[32];
+	uint16_t acq_time = adc->channel_config.acquisition_time;
+
+	if (acq_time == ADC_ACQ_TIME_DEFAULT) {
+		snprintf(acq_time_str, sizeof(acq_time_str), "default");
+	} else {
+		uint16_t val = ADC_ACQ_TIME_VALUE(acq_time);
+		uint16_t unit = ADC_ACQ_TIME_UNIT(acq_time);
+		const char *unit_str = "";
+
+		switch (unit) {
+		case ADC_ACQ_TIME_MICROSECONDS:
+			unit_str = "us";
+			break;
+		case ADC_ACQ_TIME_NANOSECONDS:
+			unit_str = "ns";
+			break;
+		case ADC_ACQ_TIME_TICKS:
+			unit_str = "ticks";
+			break;
+		default:
+			unit_str = "unknown";
+			break;
+		}
+		snprintf(acq_time_str, sizeof(acq_time_str), "%u %s", val, unit_str);
+	}
 
 	shell_print(sh, "%s:\n"
 			   "Gain: %s\n"
 			   "Reference: %s\n"
-			   "Acquisition Time: %u\n"
+			   "Acquisition Time: %s\n"
 			   "Channel ID: %u\n"
 			   "Differential: %u\n"
 			   "Resolution: %u",
 			   adc->dev->name,
 			   chosen_gain,
 			   chosen_reference,
-			   adc->channel_config.acquisition_time,
+			   acq_time_str,
 			   adc->channel_config.channel_id,
 			   adc->channel_config.differential,
 			   adc->resolution);
